@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoyaltyChain — Mi Wallet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --brand: #26215C; --brand-mid: #3C3489; --brand-light: #534AB7;
+    --brand-pale: #EEEDFE; --brand-muted: #AFA9EC;
+    --gold: #FAC775; --green: #639922; --green-bg: #EAF3DE;
+    --bg: #f5f4f9; --surface: #fff;
+    --text: #1a1a2e; --text2: #5f5e7a; --text3: #9998b0;
+    --border: rgba(0,0,0,0.1); --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .page { max-width: 420px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .logo { width: 44px; height: 44px; background: var(--brand); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 26px; height: 26px; fill: var(--brand-pale); }
+  .header-text h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .header-text p  { font-size: 13px; color: var(--text2); }
+
+  .pass { background: var(--brand); border-radius: 20px; padding: 20px; color: var(--brand-pale); margin-bottom: 16px; }
+  .pass-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .pass-brand { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--brand-muted); margin-bottom: 4px; }
+  .pass-name  { font-size: 17px; font-weight: 600; }
+  .level-badge { background: rgba(250,199,117,.18); border: 1px solid var(--gold); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: var(--gold); display: flex; align-items: center; gap: 5px; }
+  .pass-pts-label { font-size: 11px; color: var(--brand-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .pass-pts { font-size: 40px; font-weight: 700; color: #fff; line-height: 1; }
+  .pass-pts-sub { font-size: 12px; color: var(--brand-muted); margin-top: 4px; }
+  .pass-bar-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--brand-muted); margin: 14px 0 4px; }
+  .bar-track { background: rgba(255,255,255,.12); border-radius: 99px; height: 5px; }
+  .bar-fill  { height: 5px; border-radius: 99px; background: var(--brand-light); width: 57%; }
+
+  .qr-section { background: var(--surface); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border); }
+  .qr-box { width: 180px; height: 180px; background: #fff; border-radius: 10px; padding: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
+  .qr-box canvas, .qr-box img { width: 160px !important; height: 160px !important; }
+  .member-chip { background: var(--brand-pale); border-radius: var(--radius-sm); padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
+  .member-chip .m-name { font-size: 13px; font-weight: 600; color: var(--brand-mid); }
+  .member-chip .m-id   { font-size: 11px; color: var(--brand-light); font-family: monospace; }
+  .qr-hint { font-size: 12px; color: var(--text2); text-align: center; }
+
+  .wallet-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .btn-google {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #ddd; background: #fff; color: #1a1a2e;
+    transition: opacity .15s, transform .1s; width: 100%;
+  }
+  .btn-google:hover { opacity: .88; }
+  .btn-google:active { transform: scale(.98); }
+  .btn-google svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .btn-google.loading { opacity: .6; pointer-events: none; }
+  .btn-google.success { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+  .status-bar { border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .status-bar.ok  { background: var(--green-bg); color: #27500A; border: 1px solid rgba(99,153,34,.3); }
+  .status-bar.err { background: #FCEBEB; color: #791F1F; border: 1px solid rgba(162,45,45,.3); }
+
+  .scan-demo { background: var(--green-bg); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; border: 1px solid rgba(99,153,34,.2); transition: background .15s; }
+  .scan-demo:hover { background: #d5eab5; }
+  .scan-icon { width: 36px; height: 36px; background: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .scan-icon svg { width: 18px; height: 18px; fill: #fff; }
+  .scan-demo p { font-size: 13px; color: var(--text2); }
+  .scan-demo strong { font-size: 14px; color: var(--green); display: block; }
+
+  .seal-section { background: var(--surface); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .seal-section h3 { font-size: 14px; font-weight: 600; color: var(--text); align-self: flex-start; }
+  .seal-actions { display: flex; gap: 8px; }
+  .seal-btn { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px; cursor: pointer; color: var(--text2); transition: background .15s; }
+  .seal-btn:hover { background: var(--brand-pale); color: var(--brand-mid); }
+
+  /* Edit form */
+  .edit-section { background: var(--surface); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); margin-bottom: 16px; }
+  .edit-section h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+  .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .form-row label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .form-row input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 14px; color: var(--text); background: var(--bg); width: 100%; }
+  .form-row input:focus { outline: none; border-color: var(--brand-light); background: #fff; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .apply-btn { width: 100%; padding: 11px; background: var(--brand); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: background .15s; }
+  .apply-btn:hover { background: var(--brand-mid); }
+
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--brand); color: var(--brand-pale); padding: 12px 24px; border-radius: 99px; font-size: 14px; display: none; white-space: nowrap; z-index: 999; }
+  canvas#seal { display: block; }
+
+  .api-note { font-size: 11px; color: var(--text3); text-align: center; margin-top: -8px; margin-bottom: 16px; }
+  .api-note code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.3L12 17l-6.2 4.2 2.4-7.3L2 9.4h7.6z"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>LoyaltyChain</h1>
+      <p id="header-sub">Cargando perfil...</p>
+    </div>
+  </div>
+
+  <!-- Pass card -->
+  <div class="pass">
+    <div class="pass-top">
+      <div>
+        <div class="pass-brand">LoyaltyChain</div>
+        <div class="pass-name" id="card-name">—</div>
+      </div>
+      <div class="level-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="#FAC775"><path d="M3 18l2-9 7 5 7-5 2 9H3zm16-13a2 2 0 11-4 0 2 2 0 014 0zM9 5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <span id="card-level">—</span>
+      </div>
+    </div>
+    <div class="pass-pts-label">Puntos LYL</div>
+    <div class="pass-pts" id="card-pts">—</div>
+    <div class="pass-pts-sub" id="card-value">—</div>
+    <div class="pass-bar-row"><span id="card-level2">—</span><span id="card-next">—</span></div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+  </div>
+
+  <!-- QR -->
+  <div class="qr-section">
+    <div class="qr-box" id="qr-container"></div>
+    <div class="member-chip">
+      <div>
+        <div class="m-name" id="qr-name">—</div>
+        <div class="m-id" id="qr-id">—</div>
+      </div>
+    </div>
+    <p class="qr-hint">Presenta este código en caja para sumar puntos</p>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="status-bar"></div>
+
+  <!-- Google Wallet button -->
+  <div class="wallet-btns">
+    <button class="btn-google" id="btn-google" onclick="addToGoogle()">
+      <svg viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Añadir a Google Wallet
+    </button>
+  </div>
+  <p class="api-note">Conectado a <code>http://127.0.0.1:8000</code></p>
+
+  <!-- Scan demo -->
+  <div class="scan-demo" onclick="simulateScan()">
+    <div class="scan-icon">
+      <svg viewBox="0 0 24 24"><path d="M2 7V4a1 1 0 011-1h3M22 7V4a1 1 0 00-1-1h-3M2 17v3a1 1 0 001 1h3M22 17v3a1 1 0 01-1 1h-3M7 12h10"/></svg>
+    </div>
+    <div>
+      <strong>Probar escaneo en tienda</strong>
+      <p>Simula un cajero escaneando tu QR</p>
+    </div>
+  </div>
+
+  <!-- Edit member data -->
+  <div class="edit-section">
+    <h3>Datos del miembro</h3>
+    <div class="form-row">
+      <label>Nombre</label>
+      <input type="text" id="f-name" value="Diana">
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>ID de miembro</label>
+        <input type="text" id="f-id" value="4A2F-E9B1-MX">
+      </div>
+      <div class="form-row">
+        <label>Nivel</label>
+        <input type="text" id="f-level" value="Gold">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Puntos LYL</label>
+      <input type="number" id="f-points" value="3840">
+    </div>
+    <div class="form-row">
+      <label>Wallet address</label>
+      <input type="text" id="f-wallet" value="0x4a2fC3d8e1B7a9F2c0D5e6B8A1f3C4d7E9b12345">
+    </div>
+    <button class="apply-btn" onclick="applyMember()">Actualizar pase</button>
+  </div>
+
+  <!-- Sello -->
+  <div class="seal-section">
+    <h3>Sello de miembro</h3>
+    <canvas id="seal" width="200" height="200"></canvas>
+    <div class="seal-actions">
+      <button class="seal-btn" onclick="downloadSeal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descargar
+      </button>
+      <button class="seal-btn" onclick="copySeal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copiar
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = "http://127.0.0.1:8000";
+
+let MEMBER = {
+  member_id: "4A2F-E9B1-MX",
+  name: "Diana",
+  points: 3840,
+  level: "Gold",
+  wallet_address: "0x4a2fC3d8e1B7a9F2c0D5e6B8A1f3C4d7E9b12345"
+};
+
+// ── Render ────────────────────────────────────────────────────────────────────
+let qrInstance = null;
+
+function renderCard() {
+  const pts = MEMBER.points;
+  const val = (pts / 100).toFixed(2);
+  const pct = Math.min(100, Math.round((pts % 2000) / 2000 * 100));
+
+  document.getElementById("header-sub").textContent = `${MEMBER.name} · ${MEMBER.level}`;
+  document.getElementById("card-name").textContent = MEMBER.name;
+  document.getElementById("card-level").textContent = MEMBER.level;
+  document.getElementById("card-level2").textContent = MEMBER.level;
+  document.getElementById("card-pts").textContent = pts.toLocaleString("es-MX");
+  document.getElementById("card-value").textContent = `≈ $${val} MXN · ETH Mainnet`;
+  document.getElementById("card-next").textContent = `${(2000 - pts % 2000).toLocaleString()} pts para siguiente nivel`;
+  document.getElementById("bar-fill").style.width = pct + "%";
+  document.getElementById("qr-name").textContent = `${MEMBER.name} · ${MEMBER.level}`;
+  document.getElementById("qr-id").textContent = `LC-${MEMBER.member_id}`;
+
+  const qrData = `LC-${MEMBER.member_id}|${MEMBER.wallet_address}|${MEMBER.points}`;
+  const box = document.getElementById("qr-container");
+  box.innerHTML = "";
+  qrInstance = new QRCode(box, {
+    text: qrData, width: 160, height: 160,
+    colorDark: "#26215C", colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  drawSeal();
+}
+
+function applyMember() {
+  MEMBER = {
+    member_id: document.getElementById("f-id").value.trim(),
+    name: document.getElementById("f-name").value.trim(),
+    points: parseInt(document.getElementById("f-points").value) || 0,
+    level: document.getElementById("f-level").value.trim(),
+    wallet_address: document.getElementById("f-wallet").value.trim()
+  };
+  renderCard();
+  toast("Pase actualizado");
+}
+
+// ── Google Wallet ─────────────────────────────────────────────────────────────
+async function addToGoogle() {
+  const btn = document.getElementById("btn-google");
+  const bar = document.getElementById("status-bar");
+
+  btn.classList.add("loading");
+  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Conectando con Google Wallet...`;
+
+  bar.style.display = "none";
+
+  try {
+    const res = await fetch(`${API}/wallet/google/add-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(MEMBER)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Error del servidor");
+    }
+
+    const { url } = await res.json();
+
+    bar.className = "status-bar ok";
+    bar.textContent = "✓ URL generada — abriendo Google Wallet...";
+    bar.style.display = "block";
+
+    window.open(url, "_blank");
+    toast("Redirigiendo a Google Wallet...");
+
+  } catch (e) {
+    bar.className = "status-bar err";
+    bar.textContent = "Error: " + e.message + " — ¿Está corriendo el servidor en el puerto 8000?";
+    bar.style.display = "block";
+  } finally {
+    btn.classList.remove("loading");
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Añadir a Google Wallet`;
+  }
+}
+
+// ── Scan demo ─────────────────────────────────────────────────────────────────
+function simulateScan() {
+  const pts = MEMBER.points + 150;
+  toast(`✓ Escaneo exitoso — +150 LYL · Nuevo saldo: ${pts.toLocaleString("es-MX")} LYL`);
+  MEMBER.points = pts;
+  document.getElementById("f-points").value = pts;
+  renderCard();
+}
+
+// ── Sello ─────────────────────────────────────────────────────────────────────
+function drawSeal() {
+  const canvas = document.getElementById("seal");
+  const ctx = canvas.getContext("2d");
+  const cx = 100, cy = 100;
+  ctx.clearRect(0,0,200,200);
+
+  const spikes = 24;
+  ctx.beginPath();
+  for (let i = 0; i < spikes*2; i++) {
+    const a = (i*Math.PI/spikes) - Math.PI/2;
+    const r = i%2===0 ? 95 : 85;
+    ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#26215C"; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(cx,cy,80,0,Math.PI*2);
+  ctx.fillStyle = "#3C3489"; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(cx,cy,74,0,Math.PI*2);
+  ctx.strokeStyle = "#AFA9EC"; ctx.lineWidth=1.5; ctx.stroke();
+
+  ctx.font="bold 10px monospace"; ctx.fillStyle="#AFA9EC";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  const arcText="LOYALTYCHAIN · ETHEREUM · MX ·";
+  const arcR=63, step=(Math.PI*1.6)/arcText.length;
+  const start=-Math.PI/2-(arcText.length*step)/2;
+  for(let i=0;i<arcText.length;i++){
+    const a=start+i*step;
+    ctx.save(); ctx.translate(cx+Math.cos(a)*arcR,cy+Math.sin(a)*arcR);
+    ctx.rotate(a+Math.PI/2); ctx.fillText(arcText[i],0,0); ctx.restore();
+  }
+
+  const starPts=6, sO=32, sI=14;
+  ctx.beginPath();
+  for(let i=0;i<starPts*2;i++){
+    const a=(i*Math.PI/starPts)-Math.PI/2;
+    const r=i%2===0?sO:sI;
+    ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+  }
+  ctx.closePath(); ctx.fillStyle="#FAC775"; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(cx,cy,12,0,Math.PI*2);
+  ctx.fillStyle="#26215C"; ctx.fill();
+
+  ctx.font="bold 13px -apple-system,sans-serif";
+  ctx.fillStyle="#FAC775"; ctx.textAlign="center";
+  ctx.fillText(MEMBER.level.toUpperCase(), cx, cy+52);
+
+  ctx.font="10px monospace"; ctx.fillStyle="#AFA9EC";
+  ctx.fillText(`LC-${MEMBER.member_id}`, cx, cy+66);
+}
+
+function downloadSeal() {
+  const a = document.createElement("a");
+  a.download = `loyalty-seal-${MEMBER.level.toLowerCase()}.png`;
+  a.href = document.getElementById("seal").toDataURL("image/png");
+  a.click(); toast("Sello descargado");
+}
+
+async function copySeal() {
+  document.getElementById("seal").toBlob(async blob => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]);
+      toast("Sello copiado al portapapeles");
+    } catch { toast("Usa Descargar para guardar el sello"); }
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._t); t._t = setTimeout(()=>t.style.display="none", 3500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderCard();
+</script>
+</body>
+</html>

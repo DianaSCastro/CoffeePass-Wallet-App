@@ -1,0 +1,12 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-dotenv==1.0.1
+pydantic==2.7.1
+
+# Google Wallet
+PyJWT==2.8.0
+google-auth==2.29.0
+requests==2.32.3
+
+# Apple Wallet
+cryptography==42.0.8
